@@ -24,11 +24,11 @@ import java.util.stream.Collectors;
 public class ObjectController {
     Log log = LogFactory.getLog(ObjectController.class);
 
-//    private static String ACCESS_KEY = "ecs-cf-broker-user";
-//    private static String GOOD_USER = "";
-//    private static String SECRET_KEY = "";
-//    private static String ENDPOINT = "https://..."
-//    private static String BUCKET = "";
+    private static String ACCESS_KEY = "130820808912778549-test";
+    private static String GOOD_USER = "130820808912778549@ecstestdrive.emc.com";
+    private static String SECRET_KEY = "zuJufdiWcGwx9fGCJaD7/qQd0yGOsO31ESPqynaC";
+    private static String ENDPOINT = "https://object.ecstestdrive.com";
+    private static String BUCKET = "test-bucket";
 
     private static AWSCredentials credentials = new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY);
     private static AWSCredentialsProvider credentialsProvider = new AWSStaticCredentialsProvider(credentials);
@@ -63,23 +63,27 @@ public class ObjectController {
         ObjectListing listing = s3.listObjects(BUCKET);
         for (S3ObjectSummary objectSummary : listing.getObjectSummaries()) {
             S3Object o = new S3Object(objectSummary.getKey());
-            AccessControlList acl = s3.getObjectAcl(BUCKET, objectSummary.getKey());
-            Boolean bad = ! acl.getGrantsAsList()
-                    .stream()
-                    .anyMatch(grant -> grant.getGrantee().getIdentifier().equals(GOOD_USER));
-            String acls = acl.getGrantsAsList()
-                    .stream()
-                    .map(grant -> {
-                        return grant.getGrantee().getIdentifier() +
-                                "/" +
-                                grant.getPermission().toString();
-                    })
-                    .collect(Collectors.joining(", "));
-            o.setName(objectSummary.getKey());
-            o.setDate(objectSummary.getLastModified());
-            o.setAcls(acls);
-            o.setBad(bad);
-            objects.add(o);
+            try {
+                AccessControlList acl = s3.getObjectAcl(BUCKET, objectSummary.getKey());
+                Boolean bad = !acl.getGrantsAsList()
+                        .stream()
+                        .anyMatch(grant -> grant.getGrantee().getIdentifier().equals(GOOD_USER));
+                String acls = acl.getGrantsAsList()
+                        .stream()
+                        .map(grant -> {
+                            return grant.getGrantee().getIdentifier() +
+                                    "/" +
+                                    grant.getPermission().toString();
+                        })
+                        .collect(Collectors.joining(", "));
+                o.setName(objectSummary.getKey());
+                o.setDate(objectSummary.getLastModified());
+                o.setAcls(acls);
+                o.setBad(bad);
+                objects.add(o);
+            } catch (AmazonS3Exception e) {
+                log.info(e);
+            }
         }
         return objects;
     }
